@@ -22,13 +22,23 @@ def loop_len_shift(path, offset):
                 soxi = subprocess.check_output(['sox', '--info', dirName + '\\' + fname], shell=True)
                 print soxi
 
+                # find sample rate
+                for line in soxi.split('\n'):
+                    if re.search(r'Sample Rate', line):
+                        fs = line.split()[3]
+                print fs        
+
                 # find sample length 
                 for line in soxi.split('\n'):
-                    if re.search(r'Dur', line):
+                    if re.search(r'Duration', line):
                         for section in line.split('='):
                             if re.search(r'samples',section):
                                 loop_len = section.split()[0]
+                print loop_len
 
+                # convert offset to samples
+                off_samps = float(offset)*float(fs)/1000.0
+                print off_samps
 
                 subprocess.call(['sox', fname, 'temp%1n.aiff', 'trim 0', loop_len-offset, ': newfile : trim 0', offset])
                 #subprocess.call(['sox', 'temp0.aiff', 'temp1.aiff', 'fname_new.aiff'])
@@ -54,7 +64,7 @@ if __name__ == "__main__":
     # Input argument parsing
     parser = argparse.ArgumentParser(description='Looplenshift')
     parser.add_argument('path', help='Root dir or aiff')
-    parser.add_argument('offset', help='Offset', default=0)
+    parser.add_argument('offset', help='Offset (ms)', default=0)
     args = parser.parse_args()
 
     # Check that path exists
