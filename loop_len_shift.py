@@ -33,14 +33,20 @@ def loop_len_shift(path, offset):
                     if re.search(r'Duration', line):
                         for section in line.split('='):
                             if re.search(r'samples',section):
-                                loop_len = section.split()[0]
+                                loop_len = float(section.split()[0])
                 print loop_len
 
                 # convert offset to samples
                 off_samps = float(offset)*float(fs)/1000.0
                 print off_samps
 
-                subprocess.call(['sox', fname, 'temp%1n.aiff', 'trim 0', loop_len-offset, ': newfile : trim 0', offset])
+                # sox fname.aiff temp%1n.aiff trim 0s (loop_len-offset)s : newfile : trim 0s (offset)s
+                junkstr = 'temp%1n.aiff', 'trim 0s ' + str(int(loop_len - float(offset))) + 's : newfile : trim 0s ' + str(offset) + 's'
+                
+                print junkstr
+
+                #subprocess.call(['sox', dirName + '\\' + fname, 'temp%1n.aiff', 'trim 0s ' + str(int(loop_len - float(offset))) + ' s : newfile : trim 0s' + str(offset) + 's'])
+                subprocess.call(['sox', dirName + '\\' + fname, junkstr])
                 #subprocess.call(['sox', 'temp0.aiff', 'temp1.aiff', 'fname_new.aiff'])
 
                 # cleanup
