@@ -14,7 +14,7 @@ def loop_len_shift(path, offset):
     for dirName, subdirList, fileList in os.walk(path, topdown=False):
 
         if dirName.endswith('Media'):
-            fileList = [fi for fi in fileList if fi.endswith('aif')]
+            fileList = [fi for fi in fileList if fi.endswith('aiff')]
             print('Found directory: %s' % dirName)
             for fname in fileList:
                 print('\t%s' % fname)
@@ -41,11 +41,21 @@ def loop_len_shift(path, offset):
                 off_samps = int(float(offset)*float(fs)/1000.0)
                 print 'sample offset = ' + str(off_samps)
 
-                # sox fname.aiff temp%1n.aiff trim 0s (loop_len-offset)s : newfile : trim 0s (offset)s
-                shift_args = [
+                # convert aiff to wav 
+                args = [
                     'sox',
                     dirName + '\\' + fname,
-                    dirName + '\\' + 'temp%1n.aiff',
+                    dirName + '\\working.wav'
+                    ]
+                proc = subprocess.Popen(args, shell=True)
+                proc.wait()
+                print proc.returncode
+
+                # sox fname.aiff temp%1n.aiff trim 0s (loop_len-offset)s : newfile : trim 0s (offset)s
+                args = [
+                    'sox',
+                    dirName + '\\working.wav',
+                    dirName + '\\' + 'temp%1n.wav',
                     'trim',
                     '0s',
                     str(int(loop_len - off_samps)) + 's',
@@ -56,25 +66,36 @@ def loop_len_shift(path, offset):
                     '0s',
                     str(int(off_samps)) + 's'
                 ]
-
-                print shift_args
-                proc = subprocess.Popen(shift_args, shell=True)
+                proc = subprocess.Popen(args, shell=True)
                 proc.wait()
                 print proc.returncode
 
-                cat_args = [
+                args = [
                     'sox',
-                    dirName + '\\temp2.aiff',
-                    dirName + '\\temp1.aiff',
-                    dirName + '\\' + fname + '_0'
+                    dirName + '\\temp2.wav',
+                    dirName + '\\temp1.wav',
+                    dirName + '\\working.wav'
                 ]
-                proc = subprocess.Popen(cat_args, shell=True)
+                proc = subprocess.Popen(args, shell=True)
                 proc.wait()
                 print proc.returncode
+
+                # convert back to aiff
+                args = [
+                    'sox',
+                    dirName + '\\working.wav',
+                    #dirName + '\\' + fname
+                    dirName + '\\new.aiff'
+                    ]
+                proc = subprocess.Popen(args, shell=True)
+                proc.wait()
+                print proc.returncode
+
 
                 # cleanup
-                os.remove(dirName + '\\temp1.aiff')
-                os.remove(dirName + '\\temp2.aiff')
+                os.remove(dirName + '\\temp1.wav')
+                os.remove(dirName + '\\temp2.wav')
+                os.remove(dirName + '\\working.wav')
 
     return
 
