@@ -18,61 +18,63 @@ def loop_len_shift(path, offset):
             print('Found directory: %s' % dirName)
             for fname in fileList:
                 print('\t%s' % fname)
-                #subprocess.call(["sox", fname, "trim"])
                 soxi = subprocess.check_output(['sox', '--info', dirName + '\\' + fname], shell=True)
-                print soxi
+                #print soxi
 
                 # find sample rate
                 for line in soxi.split('\n'):
                     if re.search(r'Sample Rate', line):
                         fs = line.split()[3]
                         break
-                print fs        
+                print 'fs = ' + fs
 
-                # find sample length 
+                # find sample length
                 for line in soxi.split('\n'):
                     if re.search(r'Duration', line):
                         for section in line.split('='):
                             if re.search(r'samples',section):
                                 loop_len = float(section.split()[0])
                                 break
-                print loop_len
+                print 'loop_len = ' + str(loop_len)
 
                 # convert offset to samples
-                off_samps = float(offset)*float(fs)/1000.0
-                print off_samps
+                off_samps = int(float(offset)*float(fs)/1000.0)
+                print 'sample offset = ' + str(off_samps)
 
                 # sox fname.aiff temp%1n.aiff trim 0s (loop_len-offset)s : newfile : trim 0s (offset)s
-                junkstr = ' temp%1n.aiff' + ' trim 0s ' + str(int(loop_len - off_samps)) + 's : newfile : trim 0s ' + str(int(off_samps)) + 's'
-                
-                print '\"' + dirName + '\\' + fname +'\"' + junkstr
-
-                #subprocess.call(['sox', dirName + '\\' + fname, 'temp%1n.aiff', 'trim 0s ' + str(int(loop_len - float(offset))) + ' s : newfile : trim 0s' + str(offset) + 's'])
-                #subprocess.call(['sox', '\"' + dirName + '\\' + fname +'\"' + junkstr])
-                
-                shift_args = []
-
-                shift_args.append('sox')
-                shift_args.append(dirName + '\\' + fname)
-                shift_args.append('temp%1n.aiff')
-                shift_args.append('trim')
-                shift_args.append('0s')
-                shift_args.append(str(int(loop_len - off_samps)) + 's')
-                shift_args.append(':')
-                shift_args.append('newfile')
-                shift_args.append(':')
-                shift_args.append('trim')
-                shift_args.append('0s')
-                shift_args.append(str(int(off_samps)) + 's')
+                shift_args = [
+                    'sox',
+                    dirName + '\\' + fname,
+                    dirName + '\\' + 'temp%1n.aiff',
+                    'trim',
+                    '0s',
+                    str(int(loop_len - off_samps)) + 's',
+                    ':',
+                    'newfile',
+                    ':',
+                    'trim',
+                    '0s',
+                    str(int(off_samps)) + 's'
+                ]
 
                 print shift_args
-                subprocess.Popen(shift_args)
+                proc = subprocess.Popen(shift_args, shell=True)
+                proc.wait()
+                print proc.returncode
 
-                #subprocess.call(['sox', 'temp0.aiff', 'temp1.aiff', 'fname_new.aiff'])
+                cat_args = [
+                    'sox',
+                    dirName + '\\temp2.aiff',
+                    dirName + '\\temp1.aiff',
+                    dirName + '\\' + fname + '_0'
+                ]
+                proc = subprocess.Popen(cat_args, shell=True)
+                proc.wait()
+                print proc.returncode
 
                 # cleanup
-                os.remove('temp0.aiff')
-                os.remove('temp1.aiff')
+                os.remove(dirName + '\\temp1.aiff')
+                os.remove(dirName + '\\temp2.aiff')
 
     return
 
@@ -98,5 +100,4 @@ if __name__ == "__main__":
     if os.path.isfile(args.path) is None:
         print 'Path does not exist'
         sys.exit(0)
-
     loop_len_shift(args.path, args.offset)
