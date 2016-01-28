@@ -9,6 +9,7 @@ import argparse
 import subprocess
 import re
 
+
 def loop_len_shift(path, offset):
 
     for dirName, subdirList, fileList in os.walk(path, topdown=False):
@@ -19,7 +20,7 @@ def loop_len_shift(path, offset):
             for fname in fileList:
                 print('\t%s' % fname)
                 soxi = subprocess.check_output(['sox', '--info', dirName + '\\' + fname], shell=True)
-                #print soxi
+                # print soxi
 
                 # find sample rate
                 for line in soxi.split('\n'):
@@ -32,21 +33,26 @@ def loop_len_shift(path, offset):
                 for line in soxi.split('\n'):
                     if re.search(r'Duration', line):
                         for section in line.split('='):
-                            if re.search(r'samples',section):
+                            if re.search(r'samples', section):
                                 loop_len = float(section.split()[0])
                                 break
                 print 'loop_len = ' + str(loop_len)
 
                 # convert offset to samples
-                off_samps = int(float(offset)*float(fs)/1000.0)
+                off_samps = int(float(offset) * float(fs) / 1000.0)
                 print 'sample offset = ' + str(off_samps)
 
-                # convert aiff to wav 
+                # split name
+                f = fname.split('.')
+                w = f[0]
+                wname = w + '.wav'
+
+                # convert aiff to working wav
                 args = [
                     'sox',
                     dirName + '\\' + fname,
-                    dirName + '\\working.wav'
-                    ]
+                    wname
+                ]
                 proc = subprocess.Popen(args, shell=True)
                 proc.wait()
                 print proc.returncode
@@ -54,8 +60,8 @@ def loop_len_shift(path, offset):
                 # sox fname.aiff temp%1n.aiff trim 0s (loop_len-offset)s : newfile : trim 0s (offset)s
                 args = [
                     'sox',
-                    dirName + '\\working.wav',
-                    dirName + '\\' + 'temp%1n.wav',
+                    wname,
+                    'temp%1n.wav',
                     'trim',
                     '0s',
                     str(int(loop_len - off_samps)) + 's',
@@ -72,9 +78,9 @@ def loop_len_shift(path, offset):
 
                 args = [
                     'sox',
-                    dirName + '\\temp2.wav',
-                    dirName + '\\temp1.wav',
-                    dirName + '\\working.wav'
+                    'temp2.wav',
+                    'temp1.wav',
+                     wname
                 ]
                 proc = subprocess.Popen(args, shell=True)
                 proc.wait()
@@ -83,19 +89,18 @@ def loop_len_shift(path, offset):
                 # convert back to aiff
                 args = [
                     'sox',
-                    dirName + '\\working.wav',
+                    wname,
                     #dirName + '\\' + fname
                     dirName + '\\new.aiff'
-                    ]
+                ]
                 proc = subprocess.Popen(args, shell=True)
                 proc.wait()
                 print proc.returncode
 
-
                 # cleanup
-                os.remove(dirName + '\\temp1.wav')
-                os.remove(dirName + '\\temp2.wav')
-                os.remove(dirName + '\\working.wav')
+                os.remove('temp1.wav')
+                os.remove('temp2.wav')
+                os.remove(wname)
 
     return
 
