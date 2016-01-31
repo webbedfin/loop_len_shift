@@ -123,32 +123,46 @@ def loop_len_shift(path, offset):
                 if os.path.isfile(dirName + '\\' + w + '.pkf'):
                     os.remove(dirName + '\\' + w + '.pkf')
 
+            # find the fundamental loop
             loop_len_min = 9999
             for w in loop_len_s:
                 loop_len_min = min(loop_len_min, loop_len_s[w])
 
             print 'fs = ' + fs + 'Hz. offset = ' + str(offset_samps[w]) + ' samples'
 
+            # check that all loops are multiples of the fundamental
             for w in loop_len_s:
                 multiplier = float(loop_len_s[w]) / float(loop_len_min)
                 print '\t\'' + w + '\' - ' + str(multiplier) + 'x' + ', length = ' + str(loop_len_s[w]) + 's'
                 if loop_len_s[w] % loop_len_min > epsilon:
                     print fname + ' is not integer multiple! ratio = ' + str(float(loop_len_s[w]) / float(loop_len_min))
 
+            '''        
             # guess the bpm
             lpm = 60.0 / float(loop_len_min)
-            bpm = lpm
+            bpm_guess = 0
 
-            while bpm < low_bpm:
-                bpm += lpm
+            for b in range(int(low_bpm), int(high_bpm)):
+                q = 60.0 / float(b)
+                bpm_quant = int(float(b) / q)
+                l_mult = lpm / q
+                z = (b / q) / l_mult
+                
+                """
+                print '\nlpm = %f' % lpm
+                print 'b = %d' % b
+                print 'q = %f' % q
+                print 'b/q = %f' % (b / q)
+                print 'bpm_quant = %d' % bpm_quant
+                print 'l_mult = %f' % l_mult
+                print '(b / q) / l_mult = %f' % z
+                """
 
-            while bpm < high_bpm:
-                if bpm % lpm == 0:
-                    print str(bpm)
+                if (z == int(z)):
+                    bpm_guess = b / q
                     break
-                bpm += lpm
-
-            #print 'bpm guess = ' + str(bpm)
+            print 'bpm guess = %d' % bpm_guess
+            '''
     return
 
 if __name__ == "__main__":
