@@ -48,67 +48,69 @@ def loop_len_shift(path, offset):
                                 break
 
                 loop_len_ms[w] = float(loop_len) / 48000.0
-                print '\t' + w + ': length = ' + str(loop_len_ms[w]) + 'ms'
+                #print '\t' + w + ': length = ' + str(loop_len_ms[w]) + 'ms'
 
                 # convert offset to samples
                 #offset_ms[w] = int(float(offset) * float(fs) / 1000.0)
                 offset_ms[w] = offset * fs / 1000
                 #print '\t\tsample offset = ' + str(offset_ms[w]) + ' samples'
 
-                # convert aiff to working wav
-                args = [
-                    'sox',
-                    dirName + '\\' + fname,
-                    wname
-                ]
-                proc = subprocess.Popen(args, shell=True)
-                proc.wait()
-                if proc.returncode != 0:
-                    print proc.returncode
+                # don't modify files if offset == 0
+                if offset != 0:
+                    # convert aiff to working wav
+                    args = [
+                        'sox',
+                        dirName + '\\' + fname,
+                        wname
+                    ]
+                    proc = subprocess.Popen(args, shell=True)
+                    proc.wait()
+                    if proc.returncode != 0:
+                        print proc.returncode
 
-                # sox fname.aiff temp%1n.aiff trim 0s (loop_len-offset)s : newfile : trim 0s (offset)s
-                args = [
-                    'sox',
-                    wname,
-                    'temp%1n.wav',
-                    'trim',
-                    '0s',
-                    str(loop_len - offset) + 's',
-                    ':',
-                    'newfile',
-                    ':',
-                    'trim',
-                    '0s',
-                    str(offset_ms[w]) + 's'
-                ]
+                    # sox fname.aiff temp%1n.aiff trim 0s (loop_len-offset)s : newfile : trim 0s (offset)s
+                    args = [
+                        'sox',
+                        wname,
+                        'temp%1n.wav',
+                        'trim',
+                        '0s',
+                        str(loop_len - offset) + 's',
+                        ':',
+                        'newfile',
+                        ':',
+                        'trim',
+                        '0s',
+                        str(offset_ms[w]) + 's'
+                    ]
 
-                #proc = subprocess.Popen(args, shell=True)
-                #proc.wait()
-                #if proc.returncode != 0:
-                #    print proc.returncode
+                    proc = subprocess.Popen(args, shell=True)
+                    proc.wait()
+                    if proc.returncode != 0:
+                        print proc.returncode
 
-                args = [
-                    'sox',
-                    'temp2.wav',
-                    'temp1.wav',
-                     wname
-                ]
-                #proc = subprocess.Popen(args, shell=True)
-                #proc.wait()
-                #if proc.returncode != 0:
-                #    print proc.returncode
+                    args = [
+                        'sox',
+                        'temp2.wav',
+                        'temp1.wav',
+                         wname
+                    ]
+                    proc = subprocess.Popen(args, shell=True)
+                    proc.wait()
+                    if proc.returncode != 0:
+                        print proc.returncode
 
-                # convert back to aiff
-                args = [
-                    'sox',
-                    wname,
-                    #dirName + '\\' + fname
-                    dirName + '\\new.aiff'
-                ]
-                proc = subprocess.Popen(args, shell=True)
-                proc.wait()
-                if proc.returncode != 0:
-                    print proc.returncode
+                    # convert back to aiff
+                    args = [
+                        'sox',
+                        wname,
+                        #dirName + '\\' + fname
+                        dirName + '\\new.aiff'
+                    ]
+                    proc = subprocess.Popen(args, shell=True)
+                    proc.wait()
+                    if proc.returncode != 0:
+                        print proc.returncode
 
                 # cleanup
                 if os.path.isfile('temp1.wav'):
@@ -125,14 +127,15 @@ def loop_len_shift(path, offset):
                     os.remove(dirName + '\\' + w + '.pkf')
 
             loop_len_min = 9999999
-            for fname in loop_len_ms:
+            for w in loop_len_ms:
                 loop_len_min = min(loop_len_min, loop_len_ms[w])
-            print 'loop_len_min = ' + str(loop_len_min)
    
-            for fname in loop_len_ms:
+            for w in loop_len_ms:
+                multiplier = float(loop_len_ms[w]) / float(loop_len_min)
+                print '\t' + w + ': length = ' + str(loop_len_ms[w]) + 'ms, muliplier = ' + str(multiplier) + 'x'
                 if loop_len_ms[w] % loop_len_min > epsilon:
-                    print fname + ' is not integer multiple! ratio = ' + str(float(loop_len_ms[w]) / float(loop_len_min))
-                    print 'loop_len_ms[w] % loop_len_min = ' + str(loop_len_ms[fname] % loop_len_min)
+                    print fname + ' is not integer multiple! ratio = ' + str()
+                    print 'loop_len_ms[w] % loop_len_min = ' + str(multiplier)
     return
 
 if __name__ == "__main__":
@@ -147,7 +150,7 @@ if __name__ == "__main__":
     # Input argument parsing
     parser = argparse.ArgumentParser(description='Loop len shift')
     parser.add_argument('path', help='Root dir or aiff')
-    parser.add_argument('offset', help='Offset (ms)', default=0)
+    parser.add_argument('offset', help='Offset (ms). 0 = informational.', default=0)
     args = parser.parse_args()
 
     # Check that path exists
