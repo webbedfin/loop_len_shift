@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 __copyright__ = """
-                      Loop length shift.
-                        Shifts the start point of loops
+                      Loop length shift: Shifts the start point of loops.
 
                       Chris Derry, 2016
 """
@@ -12,6 +11,7 @@ import argparse
 import subprocess
 import re
 
+epsilon = 4 * sys.float_info.epsilon
 
 def loop_len_shift(path, offset):
     offset = int(offset)
@@ -24,7 +24,11 @@ def loop_len_shift(path, offset):
             offset_ms = dict()
 
             for fname in fileList:
-                print('\t%s' % fname)
+                # split name
+                f = fname.split('.')
+                w = f[0]
+                wname = w + '.wav'
+
                 soxi = subprocess.check_output(['sox', '--info', dirName + '\\' + fname], shell=True)
                 # print soxi
 
@@ -43,18 +47,13 @@ def loop_len_shift(path, offset):
                                 loop_len = int(section.split()[0])
                                 break
 
-                loop_len_ms[fname] = float(loop_len) / 48000.0
-                print '\t\tlength = ' + str(loop_len_ms[fname]) + 'ms'
+                loop_len_ms[w] = float(loop_len) / 48000.0
+                print '\t' + w + ': length = ' + str(loop_len_ms[w]) + 'ms'
 
                 # convert offset to samples
-                #offset_ms[fname] = int(float(offset) * float(fs) / 1000.0)
-                offset_ms[fname] = offset * fs / 1000
-                #print '\t\tsample offset = ' + str(offset_ms[fname]) + ' samples'
-
-                # split name
-                f = fname.split('.')
-                w = f[0]
-                wname = w + '.wav'
+                #offset_ms[w] = int(float(offset) * float(fs) / 1000.0)
+                offset_ms[w] = offset * fs / 1000
+                #print '\t\tsample offset = ' + str(offset_ms[w]) + ' samples'
 
                 # convert aiff to working wav
                 args = [
@@ -80,13 +79,13 @@ def loop_len_shift(path, offset):
                     ':',
                     'trim',
                     '0s',
-                    str(offset_ms[fname]) + 's'
+                    str(offset_ms[w]) + 's'
                 ]
 
-                proc = subprocess.Popen(args, shell=True)
-                proc.wait()
-                if proc.returncode != 0:
-                    print proc.returncode
+                #proc = subprocess.Popen(args, shell=True)
+                #proc.wait()
+                #if proc.returncode != 0:
+                #    print proc.returncode
 
                 args = [
                     'sox',
@@ -94,10 +93,10 @@ def loop_len_shift(path, offset):
                     'temp1.wav',
                      wname
                 ]
-                proc = subprocess.Popen(args, shell=True)
-                proc.wait()
-                if proc.returncode != 0:
-                    print proc.returncode
+                #proc = subprocess.Popen(args, shell=True)
+                #proc.wait()
+                #if proc.returncode != 0:
+                #    print proc.returncode
 
                 # convert back to aiff
                 args = [
@@ -112,9 +111,12 @@ def loop_len_shift(path, offset):
                     print proc.returncode
 
                 # cleanup
-                os.remove('temp1.wav')
-                os.remove('temp2.wav')
-                os.remove(wname)
+                if os.path.isfile('temp1.wav'):
+                    os.remove('temp1.wav')
+                if os.path.isfile('temp2.wav'):
+                    os.remove('temp2.wav')
+                if os.path.isfile('new.aiff'):
+                    os.remove(wname)
 
                 # dbg
                 if os.path.isfile(dirName + '\\new.aiff'):
@@ -122,15 +124,21 @@ def loop_len_shift(path, offset):
                 if os.path.isfile(dirName + '\\' + w + '.pkf'):
                     os.remove(dirName + '\\' + w + '.pkf')
 
-            loop_len_min = min(loop_len_ms)
-
-
+            loop_len_min = 9999999
+            for fname in loop_len_ms:
+                loop_len_min = min(loop_len_min, loop_len_ms[w])
+            print 'loop_len_min = ' + str(loop_len_min)
+   
+            for fname in loop_len_ms:
+                if loop_len_ms[w] % loop_len_min > epsilon:
+                    print fname + ' is not integer multiple! ratio = ' + str(float(loop_len_ms[w]) / float(loop_len_min))
+                    print 'loop_len_ms[w] % loop_len_min = ' + str(loop_len_ms[fname] % loop_len_min)
     return
 
 if __name__ == "__main__":
     """ Main entry point """
 
-    print """
+    print """   
                     Loop length shift
     {0}
 
