@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 __copyright__ = """
-                      Loop length shift: Shifts the start point of loops.
+                      Shifts the start point of loops.
 
                       Chris Derry, 2016
 """
@@ -19,9 +19,9 @@ def loop_len_shift(path, offset):
     for dirName, subdirList, fileList in os.walk(path, topdown=False):
         if dirName.endswith('Media'):
             fileList = [fi for fi in fileList if fi.endswith('aiff')]
-            print('\nFound directory \"%s\"' % dirName)
+            print('\n\"%s\"' % dirName)
             loop_len_ms = dict()
-            offset_ms = dict()
+            offset_samps = dict()
 
             for fname in fileList:
                 # split name
@@ -37,7 +37,6 @@ def loop_len_shift(path, offset):
                     if re.search(r'Sample Rate', line):
                         fs = int(line.split()[3])
                         break
-                # print '\tfs = ' + fs
 
                 # find sample length
                 for line in soxi.split('\n'):
@@ -48,12 +47,9 @@ def loop_len_shift(path, offset):
                                 break
 
                 loop_len_ms[w] = float(loop_len) / 48000.0
-                #print '\t' + w + ': length = ' + str(loop_len_ms[w]) + 'ms'
 
                 # convert offset to samples
-                #offset_ms[w] = int(float(offset) * float(fs) / 1000.0)
-                offset_ms[w] = offset * fs / 1000
-                #print '\t\tsample offset = ' + str(offset_ms[w]) + ' samples'
+                offset_samps[w] = offset * fs / 1000
 
                 # don't modify files if offset == 0
                 if offset != 0:
@@ -75,13 +71,13 @@ def loop_len_shift(path, offset):
                         'temp%1n.wav',
                         'trim',
                         '0s',
-                        str(loop_len - offset) + 's',
+                        str(loop_len - offset_samps[w]) + 's',
                         ':',
                         'newfile',
                         ':',
                         'trim',
                         '0s',
-                        str(offset_ms[w]) + 's'
+                        str(offset_samps[w]) + 's'
                     ]
 
                     proc = subprocess.Popen(args, shell=True)
@@ -93,7 +89,7 @@ def loop_len_shift(path, offset):
                         'sox',
                         'temp2.wav',
                         'temp1.wav',
-                         wname
+                        wname
                     ]
                     proc = subprocess.Popen(args, shell=True)
                     proc.wait()
@@ -120,7 +116,6 @@ def loop_len_shift(path, offset):
                 if os.path.isfile('new.aiff'):
                     os.remove(wname)
 
-                # dbg
                 if os.path.isfile(dirName + '\\new.aiff'):
                     os.remove(dirName + '\\new.aiff')
                 if os.path.isfile(dirName + '\\' + w + '.pkf'):
@@ -129,10 +124,12 @@ def loop_len_shift(path, offset):
             loop_len_min = 9999999
             for w in loop_len_ms:
                 loop_len_min = min(loop_len_min, loop_len_ms[w])
-   
+
+            print 'fs = ' + str(fs) + 'Hz. offset = ' + str(offset_samps[w]) + ' samples'
+
             for w in loop_len_ms:
                 multiplier = float(loop_len_ms[w]) / float(loop_len_min)
-                print '\t' + w + ': length = ' + str(loop_len_ms[w]) + 'ms, muliplier = ' + str(multiplier) + 'x'
+                print '\t\'' + w + '\' ' + str(multiplier) + 'x' + ', length = ' + str(loop_len_ms[w]) + 'ms'
                 if loop_len_ms[w] % loop_len_min > epsilon:
                     print fname + ' is not integer multiple! ratio = ' + str()
                     print 'loop_len_ms[w] % loop_len_min = ' + str(multiplier)
@@ -158,6 +155,9 @@ if __name__ == "__main__":
         print 'Path does not exist'
         sys.exit(0)
 
-    print 'Time-shifting loops by ' + args.offset + ' msec...'
+    if args.offset == '0':
+        print 'Showing loop information...'
+    else:
+        print 'Time-shifting loops by ' + args.offset + ' msec...'
 
     loop_len_shift(args.path, args.offset)
