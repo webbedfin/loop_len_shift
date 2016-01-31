@@ -133,15 +133,22 @@ def loop_len_shift(path, offset):
                 multiplier = float(loop_len_s[w]) / float(loop_len_min)
                 print '\t\'' + w + '\' - ' + str(multiplier) + 'x' + ', length = ' + str(loop_len_s[w]) + 's'
                 if loop_len_s[w] % loop_len_min > epsilon:
-                    print fname + ' is not integer multiple! ratio = ' + str()
+                    print fname + ' is not integer multiple! ratio = ' + str(float(loop_len_s[w]) / float(loop_len_min))
 
             # guess the bpm
-            bpm = 60.0 / float(loop_len_min)
+            lpm = 60.0 / float(loop_len_min)
+            bpm = lpm
+
             while bpm < low_bpm:
-                bpm += bpm
-            while bpm > high_bpm:
-                bpm -= bpm
-            print 'bpm guess = ' + str(bpm)
+                bpm += lpm
+
+            while bpm < high_bpm:
+                if bpm % lpm == 0:
+                    print str(bpm)
+                    break
+                bpm += lpm
+
+            #print 'bpm guess = ' + str(bpm)
     return
 
 if __name__ == "__main__":
