@@ -13,6 +13,11 @@ import re
 
 epsilon = 4 * sys.float_info.epsilon
 
+# bpm guess range
+low_bpm = 70.0
+high_bpm = 140.0
+
+
 def loop_len_shift(path, offset):
 
     for dirName, subdirList, fileList in os.walk(path, topdown=False):
@@ -39,13 +44,11 @@ def loop_len_shift(path, offset):
 
                 # find sample length
                 for line in soxi.split('\n'):
-                    if re.search(r'Duration', line):
-                        for section in line.split('='):
-                            if re.search(r'samples', section):
-                                loop_len = int(section.split()[0])
-                                break
+                    if re.search(r'samples', line):
+                        loop_len = int(line.split()[4])
+                        break
 
-                loop_len_s[w] = float(loop_len) / 48000.0
+                loop_len_s[w] = float(loop_len) / float(fs)
 
                 # convert offset to samples
                 offset_samps[w] = int(float(offset) * float(fs) / 1000.0)
@@ -131,7 +134,14 @@ def loop_len_shift(path, offset):
                 print '\t\'' + w + '\' - ' + str(multiplier) + 'x' + ', length = ' + str(loop_len_s[w]) + 's'
                 if loop_len_s[w] % loop_len_min > epsilon:
                     print fname + ' is not integer multiple! ratio = ' + str()
-                    print 'loop_len_ms[w] % loop_len_min = ' + str(multiplier)
+
+            # guess the bpm
+            bpm = 60.0 / float(loop_len_min)
+            while bpm < low_bpm:
+                bpm += bpm
+            while bpm > high_bpm:
+                bpm -= bpm
+            print 'bpm guess = ' + str(bpm)
     return
 
 if __name__ == "__main__":
