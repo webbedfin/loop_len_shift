@@ -14,7 +14,6 @@ import re
 epsilon = 4 * sys.float_info.epsilon
 
 def loop_len_shift(path, offset):
-    offset = int(offset)
 
     for dirName, subdirList, fileList in os.walk(path, topdown=False):
         if dirName.endswith('Media'):
@@ -35,7 +34,7 @@ def loop_len_shift(path, offset):
                 # find sample rate
                 for line in soxi.split('\n'):
                     if re.search(r'Sample Rate', line):
-                        fs = int(line.split()[3])
+                        fs = line.split()[3]
                         break
 
                 # find sample length
@@ -49,10 +48,10 @@ def loop_len_shift(path, offset):
                 loop_len_ms[w] = float(loop_len) / 48000.0
 
                 # convert offset to samples
-                offset_samps[w] = offset * fs / 1000
+                offset_samps[w] = int(float(offset) * float(fs) / 1000.0)
 
                 # don't modify files if offset == 0
-                if offset != 0:
+                if offset_samps[w] != 0:
                     # convert aiff to working wav
                     args = [
                         'sox',
@@ -100,8 +99,8 @@ def loop_len_shift(path, offset):
                     args = [
                         'sox',
                         wname,
-                        #dirName + '\\' + fname
-                        dirName + '\\new.aiff'
+                        # dirName + '\\' + fname  # destructive
+                        dirName + '\\new.aiff'  # non-destructive
                     ]
                     proc = subprocess.Popen(args, shell=True)
                     proc.wait()
@@ -125,11 +124,11 @@ def loop_len_shift(path, offset):
             for w in loop_len_ms:
                 loop_len_min = min(loop_len_min, loop_len_ms[w])
 
-            print 'fs = ' + str(fs) + 'Hz. offset = ' + str(offset_samps[w]) + ' samples'
+            print 'fs = ' + fs + 'Hz. offset = ' + str(offset_samps[w]) + ' samples'
 
             for w in loop_len_ms:
                 multiplier = float(loop_len_ms[w]) / float(loop_len_min)
-                print '\t\'' + w + '\' ' + str(multiplier) + 'x' + ', length = ' + str(loop_len_ms[w]) + 'ms'
+                print '\t\'' + w + '\' - ' + str(multiplier) + 'x' + ', length = ' + str(loop_len_ms[w]) + 'ms'
                 if loop_len_ms[w] % loop_len_min > epsilon:
                     print fname + ' is not integer multiple! ratio = ' + str()
                     print 'loop_len_ms[w] % loop_len_min = ' + str(multiplier)
