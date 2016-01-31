@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 __copyright__ = """
-                        2016 by Chris Derry
+                      Loop length shift.
+                        Shifts the start point of loops
+
+                      Chris Derry, 2016
 """
 
 import os
@@ -11,12 +14,15 @@ import re
 
 
 def loop_len_shift(path, offset):
+    offset = int(offset)
 
     for dirName, subdirList, fileList in os.walk(path, topdown=False):
-
         if dirName.endswith('Media'):
             fileList = [fi for fi in fileList if fi.endswith('aiff')]
-            print('Found directory: %s' % dirName)
+            print('\nFound directory \"%s\"' % dirName)
+            loop_len_ms = dict()
+            offset_ms = dict()
+
             for fname in fileList:
                 print('\t%s' % fname)
                 soxi = subprocess.check_output(['sox', '--info', dirName + '\\' + fname], shell=True)
@@ -25,22 +31,25 @@ def loop_len_shift(path, offset):
                 # find sample rate
                 for line in soxi.split('\n'):
                     if re.search(r'Sample Rate', line):
-                        fs = line.split()[3]
+                        fs = int(line.split()[3])
                         break
-                print 'fs = ' + fs
+                # print '\tfs = ' + fs
 
                 # find sample length
                 for line in soxi.split('\n'):
                     if re.search(r'Duration', line):
                         for section in line.split('='):
                             if re.search(r'samples', section):
-                                loop_len = float(section.split()[0])
+                                loop_len = int(section.split()[0])
                                 break
-                print 'loop_len = ' + str(loop_len)
+
+                loop_len_ms[fname] = float(loop_len) / 48000.0
+                print '\t\tlength = ' + str(loop_len_ms[fname]) + 'ms'
 
                 # convert offset to samples
-                off_samps = int(float(offset) * float(fs) / 1000.0)
-                print 'sample offset = ' + str(off_samps)
+                #offset_ms[fname] = int(float(offset) * float(fs) / 1000.0)
+                offset_ms[fname] = offset * fs / 1000
+                #print '\t\tsample offset = ' + str(offset_ms[fname]) + ' samples'
 
                 # split name
                 f = fname.split('.')
@@ -55,7 +64,8 @@ def loop_len_shift(path, offset):
                 ]
                 proc = subprocess.Popen(args, shell=True)
                 proc.wait()
-                print proc.returncode
+                if proc.returncode != 0:
+                    print proc.returncode
 
                 # sox fname.aiff temp%1n.aiff trim 0s (loop_len-offset)s : newfile : trim 0s (offset)s
                 args = [
@@ -64,17 +74,19 @@ def loop_len_shift(path, offset):
                     'temp%1n.wav',
                     'trim',
                     '0s',
-                    str(int(loop_len - off_samps)) + 's',
+                    str(loop_len - offset) + 's',
                     ':',
                     'newfile',
                     ':',
                     'trim',
                     '0s',
-                    str(int(off_samps)) + 's'
+                    str(offset_ms[fname]) + 's'
                 ]
+
                 proc = subprocess.Popen(args, shell=True)
                 proc.wait()
-                print proc.returncode
+                if proc.returncode != 0:
+                    print proc.returncode
 
                 args = [
                     'sox',
@@ -84,7 +96,8 @@ def loop_len_shift(path, offset):
                 ]
                 proc = subprocess.Popen(args, shell=True)
                 proc.wait()
-                print proc.returncode
+                if proc.returncode != 0:
+                    print proc.returncode
 
                 # convert back to aiff
                 args = [
@@ -95,19 +108,26 @@ def loop_len_shift(path, offset):
                 ]
                 proc = subprocess.Popen(args, shell=True)
                 proc.wait()
-                print proc.returncode
+                if proc.returncode != 0:
+                    print proc.returncode
 
                 # cleanup
                 os.remove('temp1.wav')
                 os.remove('temp2.wav')
                 os.remove(wname)
 
+                # dbg
+                if os.path.isfile(dirName + '\\new.aiff'):
+                    os.remove(dirName + '\\new.aiff')
+                if os.path.isfile(dirName + '\\' + w + '.pkf'):
+                    os.remove(dirName + '\\' + w + '.pkf')
+
+            loop_len_min = min(loop_len_ms)
+
+
     return
 
 if __name__ == "__main__":
-    #print '...Time-shifting loops by ' + sys.argv[2] + ' msec...'
-    #loop_len_shift(sys.argv[1], sys.argv[2])
-
     """ Main entry point """
 
     print """
@@ -117,7 +137,7 @@ if __name__ == "__main__":
     """.format(__copyright__)
 
     # Input argument parsing
-    parser = argparse.ArgumentParser(description='Looplenshift')
+    parser = argparse.ArgumentParser(description='Loop len shift')
     parser.add_argument('path', help='Root dir or aiff')
     parser.add_argument('offset', help='Offset (ms)', default=0)
     args = parser.parse_args()
@@ -126,4 +146,7 @@ if __name__ == "__main__":
     if os.path.isfile(args.path) is None:
         print 'Path does not exist'
         sys.exit(0)
+
+    print 'Time-shifting loops by ' + args.offset + ' msec...'
+
     loop_len_shift(args.path, args.offset)
