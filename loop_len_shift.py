@@ -19,7 +19,7 @@ def loop_len_shift(path, offset):
         if dirName.endswith('Media'):
             fileList = [fi for fi in fileList if fi.endswith('aiff')]
             print('\n\"%s\"' % dirName)
-            loop_len_ms = dict()
+            loop_len_s = dict()
             offset_samps = dict()
 
             for fname in fileList:
@@ -45,7 +45,7 @@ def loop_len_shift(path, offset):
                                 loop_len = int(section.split()[0])
                                 break
 
-                loop_len_ms[w] = float(loop_len) / 48000.0
+                loop_len_s[w] = float(loop_len) / 48000.0
 
                 # convert offset to samples
                 offset_samps[w] = int(float(offset) * float(fs) / 1000.0)
@@ -61,7 +61,7 @@ def loop_len_shift(path, offset):
                     proc = subprocess.Popen(args, shell=True)
                     proc.wait()
                     if proc.returncode != 0:
-                        print proc.returncode
+                        raise Exception(proc.returncode)
 
                     # sox fname.aiff temp%1n.aiff trim 0s (loop_len-offset)s : newfile : trim 0s (offset)s
                     args = [
@@ -82,7 +82,7 @@ def loop_len_shift(path, offset):
                     proc = subprocess.Popen(args, shell=True)
                     proc.wait()
                     if proc.returncode != 0:
-                        print proc.returncode
+                        raise Exception(proc.returncode)
 
                     args = [
                         'sox',
@@ -93,7 +93,7 @@ def loop_len_shift(path, offset):
                     proc = subprocess.Popen(args, shell=True)
                     proc.wait()
                     if proc.returncode != 0:
-                        print proc.returncode
+                        raise Exception(proc.returncode)
 
                     # convert back to aiff
                     args = [
@@ -105,7 +105,7 @@ def loop_len_shift(path, offset):
                     proc = subprocess.Popen(args, shell=True)
                     proc.wait()
                     if proc.returncode != 0:
-                        print proc.returncode
+                        raise Exception(proc.returncode)
 
                 # cleanup
                 if os.path.isfile('temp1.wav'):
@@ -120,16 +120,16 @@ def loop_len_shift(path, offset):
                 if os.path.isfile(dirName + '\\' + w + '.pkf'):
                     os.remove(dirName + '\\' + w + '.pkf')
 
-            loop_len_min = 9999999
-            for w in loop_len_ms:
-                loop_len_min = min(loop_len_min, loop_len_ms[w])
+            loop_len_min = 9999
+            for w in loop_len_s:
+                loop_len_min = min(loop_len_min, loop_len_s[w])
 
             print 'fs = ' + fs + 'Hz. offset = ' + str(offset_samps[w]) + ' samples'
 
-            for w in loop_len_ms:
-                multiplier = float(loop_len_ms[w]) / float(loop_len_min)
-                print '\t\'' + w + '\' - ' + str(multiplier) + 'x' + ', length = ' + str(loop_len_ms[w]) + 'ms'
-                if loop_len_ms[w] % loop_len_min > epsilon:
+            for w in loop_len_s:
+                multiplier = float(loop_len_s[w]) / float(loop_len_min)
+                print '\t\'' + w + '\' - ' + str(multiplier) + 'x' + ', length = ' + str(loop_len_s[w]) + 's'
+                if loop_len_s[w] % loop_len_min > epsilon:
                     print fname + ' is not integer multiple! ratio = ' + str()
                     print 'loop_len_ms[w] % loop_len_min = ' + str(multiplier)
     return
