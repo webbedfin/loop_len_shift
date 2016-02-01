@@ -10,6 +10,7 @@ import sys
 import argparse
 import subprocess
 import re
+import numpy as np
 
 epsilon = 4 * sys.float_info.epsilon
 
@@ -39,7 +40,7 @@ def loop_len_shift(path, offset):
                 # find sample rate
                 for line in soxi.split('\n'):
                     if re.search(r'Sample Rate', line):
-                        fs = line.split()[3]
+                        fs = float(line.split()[3])
                         break
 
                 # find sample length
@@ -48,10 +49,10 @@ def loop_len_shift(path, offset):
                         loop_len = int(line.split()[4])
                         break
 
-                loop_len_s[w] = float(loop_len) / float(fs)
+                loop_len_s[w] = float(loop_len) / fs
 
                 # convert offset to samples
-                offset_samps[w] = int(float(offset) * float(fs) / 1000.0)
+                offset_samps[w] = int(float(offset) * fs / 1000.0)
 
                 # don't modify files if offset == 0
                 if offset_samps[w] != 0:
@@ -128,41 +129,30 @@ def loop_len_shift(path, offset):
             for w in loop_len_s:
                 loop_len_min = min(loop_len_min, loop_len_s[w])
 
-            print 'fs = ' + fs + 'Hz. offset = ' + str(offset_samps[w]) + ' samples'
+            print 'fs = %dHz. offset = %d samples' % (fs, offset_samps[w])
 
             # check that all loops are multiples of the fundamental
             for w in loop_len_s:
                 multiplier = float(loop_len_s[w]) / float(loop_len_min)
                 print '\t\'' + w + '\' - ' + str(multiplier) + 'x' + ', length = ' + str(loop_len_s[w]) + 's'
                 if loop_len_s[w] % loop_len_min > epsilon:
-                    print fname + ' is not integer multiple! ratio = ' + str(float(loop_len_s[w]) / float(loop_len_min))
+                    print '%s is not integer multiple! ratio = %f ' % (fname, float(loop_len_s[w]) / float(loop_len_min))
 
-            '''        
             # guess the bpm
             lpm = 60.0 / float(loop_len_min)
             bpm_guess = 0
 
             for b in range(int(low_bpm), int(high_bpm)):
                 q = 60.0 / float(b)
-                bpm_quant = int(float(b) / q)
-                l_mult = lpm / q
-                z = (b / q) / l_mult
-                
-                """
-                print '\nlpm = %f' % lpm
-                print 'b = %d' % b
-                print 'q = %f' % q
-                print 'b/q = %f' % (b / q)
-                print 'bpm_quant = %d' % bpm_quant
-                print 'l_mult = %f' % l_mult
-                print '(b / q) / l_mult = %f' % z
-                """
 
-                if (z == int(z)):
-                    bpm_guess = b / q
-                    break
+                Q = np.arange(1, 16) * q
+                idx = np.where(Q == lpm)  # dbg
+                # print idx
+                if idx:
+                    print idx
+                    bpm_guess = lpm * idx[0]
+
             print 'bpm guess = %d' % bpm_guess
-            '''
     return
 
 if __name__ == "__main__":
