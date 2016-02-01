@@ -1,1 +1,0 @@
-sox song.wav ringtone%1n.wav trim 0 30 : newfile : trim 0 30
